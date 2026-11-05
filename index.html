@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pronos 1N2</title>
+<style>
+:root{--bg:#eef1f6;--card:#fff;--ink:#14213d;--mute:#5b6478;--line:#d7dce6;--pick:#1f7a4d;--warn:#b45f06;--bad:#a63d40}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1626;--card:#18223a;--ink:#e8ecf5;--mute:#98a2b8;--line:#2a3654;--pick:#4cc38a;--warn:#e0a040;--bad:#e07478}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,sans-serif;padding:16px 16px 90px;max-width:640px;margin-inline:auto}
+h1{font-size:1.5rem;font-weight:800;margin:8px 0 2px}
+h2{font-size:1rem;font-weight:600;color:var(--mute);margin:20px 0 8px}
+p.sub{margin:0 0 12px;color:var(--mute);font-size:.9rem}
+.box,.m{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.bilan{white-space:pre-line;font-size:.88rem}
+#list .m{cursor:pointer}
+#list .m:focus-visible{outline:3px solid var(--pick);outline-offset:2px}
+.m .top{display:flex;justify-content:space-between;color:var(--mute);font-size:.8rem;margin-bottom:6px}
+.m .teams{font-weight:600;margin-bottom:8px}
+.row{display:grid;grid-template-columns:20px 1fr 118px;align-items:center;gap:8px;font-size:.85rem;margin:3px 0}
+.row span:last-child{text-align:right;color:var(--mute)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--mute)}
+.row.pick .bar i{background:var(--pick)}.row.pick{font-weight:700}
+.verdict{margin:8px 0;font-size:.88rem}
+.lect{margin:8px 0;padding:6px 8px;border-left:3px solid var(--pick);background:var(--bg);border-radius:0 6px 6px 0;font-size:.85rem}
+.ok{color:var(--pick);font-weight:600}.mid{color:var(--warn);font-weight:600}.no{color:var(--bad);font-weight:600}
+.tl{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:.8rem;border-top:1px solid var(--line);padding:6px 0}
+.tl>b{flex:1 1 100%}.k{color:var(--mute)}
+.ch b{display:inline-block;width:16px;text-align:center;border-radius:3px;font-size:.72rem;margin-right:2px;color:#fff}
+.ch b.ok{background:var(--pick)}.ch b.mid{background:var(--warn)}.ch b.no{background:var(--bad)}
+.crv{color:var(--ink);margin-left:auto}.crv.big{width:100%;height:auto;margin:4px 0;color:var(--ink)}
+.crv text{fill:var(--mute);font-size:9px}
+#status{color:var(--mute);font-size:.9rem;margin:6px 0}
+.prog{height:10px;background:var(--line);border-radius:5px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--pick);transition:width .25s}
+.err{color:var(--bad)}
+footer{margin:28px 0 8px;color:var(--mute);font-size:.78rem}
+label{display:block;font-size:.85rem;color:var(--mute);margin-bottom:8px}
+input,select{display:block;width:100%;font:inherit;padding:8px;margin-top:4px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+button{font:inherit;background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:8px 12px;cursor:pointer}
+button.more{background:none;color:var(--mute);border:1px solid var(--line);padding:5px 10px;font-size:.82rem}
+button:focus-visible{outline:3px solid var(--pick);outline-offset:2px}
+.chev{color:var(--mute);font-size:.8rem;margin-top:6px;text-align:center}
+.panel{border-top:1px solid var(--line);padding-top:8px;font-size:.82rem;margin-top:6px;cursor:auto}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 8px;margin:4px 0 8px}
+.stats span{color:var(--mute)}.stats em{font-style:normal;display:block;color:var(--ink);font-weight:600}
+.last div{color:var(--mute)}
+.more2 div{margin:2px 0}.more2 b{display:block;margin-bottom:2px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--mute);font-size:9px}
+.chart .ln{stroke:var(--line);stroke-width:1;stroke-dasharray:3 3}.chart .ax{stroke:var(--line)}
+.chart .dh{fill:var(--pick)}.chart .da{fill:var(--warn)}
+.legend{font-size:.78rem;color:var(--mute);margin:4px 2px 0}
+pre{white-space:pre-wrap;font-size:.75rem;color:var(--mute);margin:6px 0 0}
+.bar2{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.chk{display:flex;align-items:center;gap:8px}
+.chk input{display:inline-block;width:auto;margin:0}
+/* Simulation */
+.balls{display:flex;gap:12px;margin:8px 0}
+.ball{width:64px;height:64px;border-radius:50%;background:var(--bg);color:var(--ink);border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;padding:0;line-height:1.15;font-size:1.05rem}
+.ball small{font-weight:400;font-size:.68rem;color:var(--mute)}
+.ball.val{border-color:var(--pick)}
+.ball.sel{background:var(--pick);border-color:var(--pick);color:#fff}.ball.sel small{color:#fff}
+.sc{font-size:.82rem;color:var(--mute);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sc input{display:inline-block;width:56px;text-align:center;margin:0}
+.stk{margin-left:auto;font-weight:700;color:var(--ink)}
+.sticky{position:sticky;bottom:70px;box-shadow:0 2px 14px #0005;font-size:.88rem}
+.sticky div{margin:2px 0}
+/* Oeil flottant */
+#eye{position:fixed;right:14px;bottom:14px;width:52px;height:52px;border-radius:50%;padding:0;display:grid;place-items:center;box-shadow:0 2px 12px #0006;z-index:30}
+#eye svg{width:28px;height:28px}
+#eyepanel{position:fixed;left:0;right:0;bottom:0;max-height:78vh;overflow:auto;background:var(--card);border-top:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px 16px 76px;z-index:20;box-shadow:0 -4px 24px #0006;max-width:640px;margin-inline:auto;font-size:.88rem}
+#eyepanel h3{margin:0 0 8px;font-size:1rem}
+#eyepanel dt{font-weight:700;margin-top:8px}#eyepanel dd{margin:0;color:var(--mute)}
+</style>
+</head>
+<body>
+<h1>Pronos 1N2</h1>
+<p class="sub">Probabilités calculées à partir d'un vrai Elo, recalculé à chaque ouverture sur les résultats de la saison.</p>
+
+<div id="home">
+<button id="gosim" type="button">🎟 Simulation de paris</button>
+<div id="bilan" class="box bilan" hidden style="margin-top:10px"></div>
+<details class="box" id="cfg" style="margin-top:10px"><summary>Réglages</summary>
+<label>Clé the-odds-api.com (facultatif, affiche les cotes du marché)<input id="key" type="password" autocomplete="off"></label>
+<button id="save" type="button">Enregistrer</button> <span id="saved" role="status"></span>
+</details>
+<label>Période<select id="win"><option value="72">3 prochains jours</option><option value="168">7 prochains jours</option></select></label>
+<div id="progwrap" class="prog"><i id="bar"></i></div>
+<p id="status">Chargement…</p>
+<div id="chartwrap" hidden><h2>Nuage des équipes</h2><div class="box chart" id="chart"></div>
+<p class="legend">Droite = marque beaucoup, haut = encaisse peu. Vert : à domicile, orange : à l'extérieur. Un trait relie deux équipes qui se rencontrent.</p></div>
+<h2 id="lh" hidden>Matchs <span style="font-weight:400">(touchez un match pour plus de données)</span></h2>
+<div id="list"></div>
+<button id="reload" hidden>Actualiser</button>
+<details class="box" style="margin-top:14px"><summary>Diagnostic des sources</summary><pre id="log"></pre></details>
+</div>
+
+<div id="sim" hidden>
+<button id="back" class="more" type="button">← Retour aux matchs</button>
+<h2>Simulation de paris</h2>
+<div class="box">
+<label>Budget total à miser (€)<input id="budget" type="number" inputmode="decimal" min="1" step="1" value="10"></label>
+<div class="bar2"><button id="opt" type="button">✨ Pré-remplir optimisé</button><button id="clr" class="more" type="button">Tout effacer</button></div>
+<label class="chk"><input type="checkbox" id="allm"> Remplir aussi les matchs sans valeur (déconseillé)</label>
+<p id="simmsg" class="legend"></p>
+</div>
+<p class="legend">Touchez 1, N ou 2 comme sur une grille de loto. Le petit cercle vert marque un pari de valeur (la cote est plus haute que la cote juste). Le score est facultatif : saisir un score choisit automatiquement 1, N ou 2.</p>
+<div id="grid"></div>
+<div id="summary" class="box sticky"></div>
+</div>
+
+<footer>Estimations statistiques, pas des certitudes. Jeu réservé aux plus de 18 ans. Aide : Joueurs Info Service, 09 74 75 13 13.</footer>
+
+<button id="eye" type="button" aria-label="Comment lire les données" aria-expanded="false">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+</button>
+<div id="eyepanel" hidden role="dialog" aria-label="Comment lire les données">
+<h3>Comment lire les données</h3>
+<dl>
+<dt>Barres 1 / N / 2</dt><dd>1 = victoire à domicile, N = match nul, 2 = victoire à l'extérieur. La barre verte est l'issue la plus probable.</dd>
+<dt>Cote juste</dt><dd>1 ÷ probabilité. C'est le seuil : un pari n'est rentable que si la cote proposée par le bookmaker est au-dessus. Exemple : si 1 domine à 70 %, parier sur 1 vaut le coup seulement si la cote est au moins 1,43. À 1,30 on perd de l'argent sur la durée, même si le pari passe souvent.</dd>
+<dt>Marché</dt><dd>Cote moyenne des bookmakers. Quand elle est affichée, la ligne « Lecture » utilise la meilleure cote trouvée.</dd>
+<dt>Net / Moyen / Incertain</dt><dd>Net : au moins 60 % pour l'issue favorite. Moyen : 50 à 60 %. Incertain : moins de 50 %, match ouvert.</dd>
+<dt>Ligne « Lecture » (👁)</dt><dd>« À jouer » = la cote est supérieure à la cote juste (gain espéré positif). « À éviter » = le favori est probable mais la cote est trop basse. Sans cote de marché, elle donne la cote minimale à exiger.</dd>
+<dt>Données du match (toucher la carte)</dt><dd>Buts attendus, scores probables, plus de 2,5 buts, les deux équipes marquent, double chance, confrontations directes, forme et courbes d'Elo.</dd>
+<dt>Simulation</dt><dd>Grille type loto : choisissez 1/N/2 ou laissez le bouton « optimisé » répartir votre budget sur les paris de valeur. Le résultat indique la probabilité de finir la soirée en positif.</dd>
+<dt>À savoir</dt><dd>Aucun algorithme ne garantit un gain chaque soir : les cotes contiennent une marge de 5 à 8 % pour le bookmaker, et un match reste aléatoire. Parier moins, ou pas du tout quand rien n'a de valeur, est la meilleure protection.</dd>
+</dl>
+<button id="eyeclose" class="more" type="button">Fermer</button>
+</div>
+
+<script>
+const LG=[["uefa.champions","Ligue des champions",0],["uefa.europa","Europa League",0],["fra.1","Ligue 1",1],["eng.1","Premier League",1],["esp.1","Liga",1],["ita.1","Serie A",1],["ger.1","Bundesliga",1]];
+const DOM=new Set(LG.filter(l=>l[2]).map(l=>l[0])),LGN=Object.fromEntries(LG.map(l=>[l[0],l[1]]));
+const ESPN="https://site.api.espn.com/apis/site/v2/sports/soccer/",SDB="https://www.thesportsdb.com/api/v1/json/3/",SDB_IDS=[4480,4481,4334,4328,4335,4332,4331];
+const ODDS_KEYS=["soccer_uefa_champs_league","soccer_uefa_europa_league","soccer_france_ligue_one","soccer_epl","soccer_spain_la_liga","soccer_italy_serie_a","soccer_germany_bundesliga"];
+const DEFAULT_KEY="b45733455ea699cf5a29f458b6e313e2",HOME_ADV=60,K=30,DAY=864e5,MARGIN=1.07;
+const LGAVG={h:1.45,a:1.15};
+const ALIAS={parissaintgermain:"parissg",manchestercity:"mancity",manchesterunited:"manunited",bayernmunich:"bayern",borussiadortmund:"dortmund",atleticomadrid:"atletico",internazionale:"inter",intermilan:"inter",olympiquemarseille:"marseille",olympiquelyonnais:"lyon",newcastleunited:"newcastle",tottenhamhotspur:"tottenham",bayerleverkusen:"leverkusen",rbleipzig:"leipzig",acmilan:"milan",asmonaco:"monaco",racingclubdelens:"lens",sportingcp:"sporting",sportinglisbon:"sporting",borussiamonchengladbach:"gladbach",eintrachtfrankfurt:"frankfurt",athleticclub:"bilbao",athleticbilbao:"bilbao",wolverhamptonwanderers:"wolves",brightonhovealbion:"brighton",westhamunited:"westham",realbetisseville:"betis",realbetis:"betis"};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\b(fc|cf|afc|sc|ssc|fk|sk|cd|club|de|1907|1899|1909)\b/g,"").replace(/[^a-z]/g,"");
+const key=s=>{const n=norm(s);return ALIAS[n]||n};
+const same=(a,b)=>{const x=key(a),y=key(b);return x===y||(x.length>=4&&y.length>=4&&(x.includes(y)||y.includes(x)))};
+const ymd=t=>new Date(t).toISOString().slice(0,10).replace(/-/g,"");
+const sc=v=>v==null||v===""?null:typeof v==="object"?+v.value:+v;
+const ts=e=>new Date(e.strTimestamp?e.strTimestamp+(/Z|\+/.test(e.strTimestamp)?"":"Z"):`${e.dateEvent}T${e.strTime||"00:00:00"}Z`).getTime();
+const eur=v=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(v);
+const pc=v=>Math.round(v*100)+" %";
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function fetchT(u,ms=12000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(u,{signal:c.signal})}finally{clearTimeout(t)}}
+// Erreurs réseau (« Load failed », délai dépassé, 429, 5xx) : on réessaie avec une pause croissante.
+// Erreur 400/404 : la requête est refusée telle quelle, inutile de réessayer (erreur « fatal »).
+async function getJSON(u,tries=3){
+  let last;
+  for(let i=0;i<tries;i++){
+    try{
+      const r=await fetchT(u);
+      if(r.status===400||r.status===404){const e=new Error("HTTP "+r.status);e.fatal=true;throw e}
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      return await r.json();
+    }catch(e){last=e;if(e.fatal)throw e;if(i<tries-1)await wait(600*(i+1)*(i+1))}
+  }
+  throw last;
+}
+function setP(p,t){$("bar").style.width=p+"%";$("progwrap").hidden=false;if(t)$("status").textContent=t}
+async function pool(tasks,n,cb){let i=0,d=0;await Promise.all(Array.from({length:n},async()=>{while(i<tasks.length){await tasks[i++]();cb(++d,tasks.length)}}))}
+
+// ---- Données ESPN (sans clé) ----
+// Cascade : plage entière -> plage avec limite -> tranches de 7 jours -> jour par jour.
+// Un 400 sur un jour isolé est ignoré (jour sans compétition) ; seules les vraies pannes réseau remontent.
+async function board(slug,a,b){
+  const u=`${ESPN}${slug}/scoreboard?dates=`,rng=`${ymd(a)}-${ymd(b)}`;
+  for(const q of [rng,rng+"&limit=300"]){
+    try{return await getJSON(u+q)}catch(e){if(!e.fatal)throw e}
+  }
+  const ev=[];
+  for(let t=a;t<=b;t+=7*DAY){
+    const t2=Math.min(t+6*DAY,b);
+    try{ev.push(...((await getJSON(u+ymd(t)+"-"+ymd(t2)+"&limit=300")).events||[]))}
+    catch(e){
+      if(!e.fatal)throw e;
+      for(let d=t;d<=t2;d+=DAY){
+        try{ev.push(...((await getJSON(u+ymd(d))).events||[]))}catch(e3){if(!e3.fatal)throw e3}
+      }
+    }
+  }
+  return{events:ev};
+}
+async function espn(slug,a,b){
+  const ck=`pc:${slug}:${ymd(a)}:${ymd(b)}`,old=b<Date.now()-3*DAY;
+  if(old)try{const c=localStorage.getItem(ck);if(c)return JSON.parse(c)}catch(e){}
+  const j=await board(slug,a,b);
+  const r=(j.events||[]).map(e=>{const c=e.competitions&&e.competitions[0];if(!c)return null;
+    const H=c.competitors.find(x=>x.homeAway==="home"),A=c.competitors.find(x=>x.homeAway==="away");if(!H||!A)return null;
+    const st=(e.status&&e.status.type)||{};
+    return{id:e.id,slug,t:new Date(e.date).getTime(),h:{id:"e"+H.team.id,n:H.team.displayName},a:{id:"e"+A.team.id,n:A.team.displayName},hs:sc(H.score),as:sc(A.score),done:!!st.completed,pre:st.state==="pre"}}).filter(Boolean);
+  if(old&&r.length)try{localStorage.setItem(ck,JSON.stringify(r))}catch(e){}
+  return r;
+}
+// ---- Secours : TheSportsDB ----
+async function sdb(){
+  const out=[];
+  for(const id of SDB_IDS){
+    const [a,b]=await Promise.all(["eventsnextleague","eventspastleague"].map(p=>getJSON(`${SDB}${p}.php?id=${id}`).catch(()=>({}))));
+    [...(a.events||[]),...(b.results||b.events||[])].forEach(e=>{
+      const hs=sc(e.intHomeScore),as=sc(e.intAwayScore);
+      out.push({id:e.idEvent,slug:"sdb",t:ts(e),h:{id:"n"+key(e.strHomeTeam),n:e.strHomeTeam},a:{id:"n"+key(e.strAwayTeam),n:e.strAwayTeam},hs,as,done:hs!=null&&as!=null,pre:hs==null,lg:e.strLeague})});
+  }
+  return out;
+}
+// ---- Cotes (facultatif) ----
+async function getOdds(k,cb){
+  try{const c=JSON.parse(localStorage.getItem("oddsCache")||"null");if(c&&Date.now()-c.t<108e5)return c.d}catch(e){}
+  const all=[];let i=0;
+  for(const s of ODDS_KEYS){cb&&cb(i++);
+    try{const r=await fetchT(`https://api.the-odds-api.com/v4/sports/${s}/odds/?apiKey=${encodeURIComponent(k)}&regions=eu&markets=h2h&oddsFormat=decimal`);
+      if(r.status===401)throw new Error("Clé the-odds-api refusée.");if(r.ok)all.push(...await r.json())}catch(e){if(/refusée/.test(e.message))throw e}}
+  try{localStorage.setItem("oddsCache",JSON.stringify({t:Date.now(),d:all}))}catch(e){}
+  return all;
+}
+function oddsOf(o){
+  const sum={},n={},best={};
+  o.bookmakers.forEach(bk=>{const m=bk.markets.find(m=>m.key==="h2h");if(!m)return;
+    m.outcomes.forEach(x=>{const k=x.name===o.home_team?"1":x.name===o.away_team?"2":"N";sum[k]=(sum[k]||0)+x.price;n[k]=(n[k]||0)+1;best[k]=Math.max(best[k]||0,x.price)})});
+  if(!sum["1"]||!sum.N||!sum["2"])return null;
+  const avg={};for(const k in sum)avg[k]=sum[k]/n[k];
+  const iv={};let s=0;for(const k in avg){iv[k]=1/avg[k];s+=iv[k]}for(const k in iv)iv[k]/=s;
+  return{avg,best,nb:n["1"],p:iv};
+}
+// ---- Elo + statistiques ----
+function predict(eH,eA,rH,rA){
+  let d=eH-eA+HOME_ADV;
+  const f=r=>r!=null&&r<4?-20:0;d+=f(rH)-f(rA);
+  const E=1/(1+Math.pow(10,-d/400)),pN=Math.max(.15,.30-Math.abs(d)/1500);
+  const pH=Math.max(.01,E-pN/2),pA=Math.max(.01,1-E-pN/2),s=pH+pN+pA;
+  return{"1":pH/s,N:pN/s,"2":pA/s};
+}
+const argmax=p=>Object.keys(p).reduce((a,b)=>p[a]>=p[b]?a:b);
+function build(res){
+  res.sort((a,b)=>a.t-b.t);
+  const T={},cal=[];let bt=0,ok=0,hw=0,gh=0,ga=0;
+  const get=x=>T[x.id]||(T[x.id]={id:x.id,n:x.n,elo:1500,pl:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,H:[0,0,0],A:[0,0,0],form:[],hist:[],cum:[0],dom:null,dp:0,dgd:0,dgf:0,last:0});
+  res.forEach(m=>{
+    const H=get(m.h),A=get(m.a),r=m.hs>m.as?"1":m.hs<m.as?"2":"N";
+    gh+=m.hs;ga+=m.as;
+    if(H.pl>=5&&A.pl>=5){bt++;const pr=predict(H.elo,A.elo),pk=argmax(pr);if(pk===r)ok++;if(r==="1")hw++;cal.push([pr[pk],pk===r])}
+    const E=1/(1+Math.pow(10,-(H.elo-A.elo+HOME_ADV)/400)),S=r==="1"?1:r==="N"?.5:0,gd=Math.abs(m.hs-m.as);
+    const dl=K*(gd<=1?1:gd===2?1.5:(11+gd)/8)*(S-E);H.elo+=dl;A.elo-=dl;
+    [[H,m.hs,m.as,m.a.n,1],[A,m.as,m.hs,m.h.n,0]].forEach(([t,f,a,o,home])=>{
+      const R=f>a?"W":f<a?"L":"D";t.pl++;t.gf+=f;t.ga+=a;t.pts+=R==="W"?3:R==="D"?1:0;
+      t[R==="W"?"w":R==="D"?"d":"l"]++;(home?t.H:t.A)[R==="W"?0:R==="D"?1:2]++;
+      t.form.push({r:R,s:`${f}-${a}`,o,home});t.hist.push([m.t,t.elo]);t.cum.push(t.pts);t.last=m.t;
+      if(DOM.has(m.slug)){t.dom=m.slug;t.dp+=R==="W"?3:R==="D"?1:0;t.dgd+=f-a;t.dgf+=f}});
+  });
+  if(res.length>=20){LGAVG.h=gh/res.length;LGAVG.a=ga/res.length}
+  const by={};Object.values(T).forEach(t=>{if(t.dom)(by[t.dom]=by[t.dom]||[]).push(t)});
+  for(const k in by)by[k].sort((a,b)=>b.dp-a.dp||b.dgd-a.dgd||b.dgf-a.dgf).forEach((t,i)=>t.rank=i+1);
+  return{T,bt,ok,hw,cal};
+}
+// ---- Buts : modèle de Poisson calé sur les probabilités 1N2 ----
+const FACT=[1,1,2,6,24,120,720,5040,40320];
+const pz=(l,k)=>Math.exp(-l)*Math.pow(l,k)/FACT[k];
+function mat(lh,la){const M=[];let s=0;for(let i=0;i<9;i++){M[i]=[];for(let j=0;j<9;j++){const v=pz(lh,i)*pz(la,j);M[i][j]=v;s+=v}}M.forEach(r=>{for(let j=0;j<9;j++)r[j]/=s});return M}
+function res3(M){let h=0,n=0,a=0;for(let i=0;i<9;i++)for(let j=0;j<9;j++){if(i>j)h+=M[i][j];else if(i===j)n+=M[i][j];else a+=M[i][j]}return{"1":h,N:n,"2":a}}
+function goals(H,A,p){
+  if(!H||!A||!p)return null;
+  const g=(LGAVG.h+LGAVG.a)/2,s=(t,v)=>(v+4*g)/(t.pl+4)/g;
+  const lh=LGAVG.h*s(H,H.gf)*s(A,A.ga),la=LGAVG.a*s(A,A.gf)*s(H,H.ga);
+  const T=Math.min(4,Math.max(1.6,lh+la));let best=null;
+  for(let w=.12;w<=.88;w+=.01){const M=mat(T*w,T*(1-w)),r=res3(M),d=Math.abs(r["1"]-p["1"])+Math.abs(r["2"]-p["2"]);if(!best||d<best.d)best={d,w,M}}
+  const M=best.M,top=[],bs={};let o25=0,bt=0;
+  for(let i=0;i<9;i++)for(let j=0;j<9;j++){
+    const v=M[i][j];top.push([i,j,v]);if(i+j>=3)o25+=v;if(i&&j)bt+=v;
+    const k=i>j?"1":i===j?"N":"2";if(!bs[k]||v>bs[k][2])bs[k]=[i,j,v];
+  }
+  top.sort((a,b)=>b[2]-a[2]);
+  return{lh:T*best.w,la:T*(1-best.w),top:top.slice(0,5),o25,bt,bs};
+}
+// ---- Lecture / conseil ----
+function advice(x){
+  const {p,od,o}=x;if(!p)return"";
+  const pick=argmax(p),pp=Math.round(p[pick]*100),fair=1/p[pick];
+  if(od){
+    let bk=null;["1","N","2"].forEach(k=>{const ed=p[k]*o[k]-1;if(!bk||ed>bk.ed)bk={k,ed}});
+    if(bk.ed>=.03)return`<b class="ok">À jouer : ${bk.k}</b> — cote ${o[bk.k].toFixed(2)} pour une cote juste de ${(1/p[bk.k]).toFixed(2)}, gain espéré ${Math.round(bk.ed*100)} % de la mise${bk.k!==pick?" (ce n'est pas le favori : plus risqué)":""}.`;
+    return`<b class="mid">À éviter.</b> ${pick} domine (${pp} %) mais la cote ${o[pick].toFixed(2)} est trop basse : il faudrait au moins ${(fair*1.03).toFixed(2)}.`;
+  }
+  return`<b>${pick} domine (${pp} %).</b> Jouer ${pick} seulement si la cote proposée est d'au moins ${(fair*1.05).toFixed(2)}.`;
+}
+// ---- Dessin ----
+function curve(v,W,H,big){
+  if(v.length<2)return"";
+  const mn=Math.min(...v),mx=Math.max(...v),r=mx-mn||1,pad=big?14:3;
+  const P=v.map((y,i)=>[pad+i*(W-2*pad)/(v.length-1),H-pad-(y-mn)/r*(H-2*pad)]),l=P[P.length-1];
+  return`<svg class="crv${big?" big":""}" viewBox="0 0 ${W} ${H}"${big?"":` width="${W}" height="${H}"`}><polyline fill="none" stroke="currentColor" stroke-width="${big?2:1.6}" points="${P.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}"/><circle cx="${l[0]}" cy="${l[1]}" r="${big?3.5:2.5}" fill="var(--pick)"/>${big?`<text x="2" y="10">${Math.round(mx)}</text><text x="2" y="${H-3}">${Math.round(mn)}</text>`:""}</svg>`;
+}
+const chips=t=>t.form.slice(-5).map(f=>`<b class="${f.r==="W"?"ok":f.r==="D"?"mid":"no"}">${f.r==="W"?"V":f.r==="D"?"N":"D"}</b>`).join("");
+const eloS=t=>[1500,...t.hist.map(x=>x[1])];
+function tline(t,name){
+  if(!t||t.pl<1)return`<div class="tl"><b>${esc(name)}</b><span class="mid">Pas de statistiques</span></div>`;
+  return`<div class="tl"><b>${esc(t.n)}</b><span class="k">${t.rank?"#"+t.rank+" · ":""}Elo ${Math.round(t.elo)}</span><span class="k">BP ${(t.gf/t.pl).toFixed(1)} · BC ${(t.ga/t.pl).toFixed(1)}</span><span class="ch">${chips(t)}</span>${curve(eloS(t),80,24)}</div>`;
+}
+function detail(t,name,rest){
+  if(!t||t.pl<1)return`<p class="mid">${esc(name)} : pas de statistiques.</p>`;
+  const g=[["Matchs",t.pl],["V-N-D",`${t.w}-${t.d}-${t.l}`],["Points",t.pts],["Diff.",(t.gf>=t.ga?"+":"")+(t.gf-t.ga)],["Domicile",t.H.join("-")],["Extérieur",t.A.join("-")],["Elo",Math.round(t.elo)],["Repos",rest!=null?Math.round(rest)+" j":"-"]];
+  return`<b>${esc(t.n)}</b><div class="stats">${g.map(([a,b])=>`<div><span>${a}</span><em>${b}</em></div>`).join("")}</div>
+<div class="last">${t.form.slice(-5).reverse().map(f=>`<div>${f.home?"Dom.":"Ext."} ${f.s} contre ${esc(f.o)}</div>`).join("")}</div>
+<div class="k">Évolution de l'Elo</div>${curve(eloS(t),320,80,1)}<div class="k">Points cumulés (toutes compétitions)</div>${curve(t.cum,320,70,1)}`;
+}
+function extra(x){
+  const {e,p,od,z}=x;let h="";
+  if(z&&p){
+    h+=`<div class="more2"><b>Pronostic détaillé</b>
+<div>Buts attendus : ${z.lh.toFixed(1)} - ${z.la.toFixed(1)}</div>
+<div>Scores les plus probables : ${z.top.map(t=>`${t[0]}-${t[1]} (${pc(t[2])})`).join(", ")}</div>
+<div>Plus de 2,5 buts : ${pc(z.o25)} · Les deux marquent : ${pc(z.bt)}</div>
+<div>Double chance : 1N ${pc(p["1"]+p.N)} · 12 ${pc(p["1"]+p["2"])} · N2 ${pc(p.N+p["2"])}</div>`;
+    if(od)h+=`<div>Meilleures cotes (${od.nb} bookmakers) : 1 → ${od.best["1"].toFixed(2)} · N → ${od.best.N.toFixed(2)} · 2 → ${od.best["2"].toFixed(2)}</div>
+<div>Gain espéré par € misé : ${["1","N","2"].map(k=>`${k} ${((p[k]*od.best[k]-1)>=0?"+":"")+(p[k]*od.best[k]-1).toFixed(2)}`).join(" · ")}</div>`;
+    h+=`</div>`;
+  }
+  const hh=S.res.filter(r=>(r.h.id===e.h.id&&r.a.id===e.a.id)||(r.h.id===e.a.id&&r.a.id===e.h.id)).slice(-3).reverse();
+  h+=`<div class="more2" style="margin-top:6px"><b>Confrontations directes (données de la saison)</b>${hh.length?hh.map(r=>`<div>${new Date(r.t).toLocaleDateString("fr-FR")} : ${esc(r.h.n)} ${r.hs}-${r.as} ${esc(r.a.n)}</div>`).join(""):"<div>Aucune dans les données chargées.</div>"}</div><hr style="border:0;border-top:1px solid var(--line)">`;
+  return h;
+}
+function drawChart(items,T){
+  const pts=[],seen=new Set();
+  items.forEach(x=>[[x.e.h,"h"],[x.e.a,"a"]].forEach(([n,tp])=>{const s=T[n.id];if(!s||!s.pl||seen.has(n.id))return;seen.add(n.id);pts.push({id:n.id,n:n.n,tp,x:s.gf/s.pl,y:s.ga/s.pl,elo:Math.round(s.elo)})}));
+  if(pts.length<2){$("chartwrap").hidden=true;return}
+  const W=340,H=250,L=30,R=12,Tp=12,B=30,xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+  const x0=Math.min(...xs)-.15,x1=Math.max(...xs)+.15,y0=Math.min(...ys)-.15,y1=Math.max(...ys)+.15;
+  const X=v=>L+(v-x0)/(x1-x0)*(W-L-R),Y=v=>Tp+(v-y0)/(y1-y0)*(H-Tp-B),pos={};pts.forEach(p=>pos[p.id]=[X(p.x),Y(p.y)]);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Nuage des équipes : buts marqués et encaissés par match"><line class="ax" x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}"/><line class="ax" x1="${L}" y1="${Tp}" x2="${L}" y2="${H-B}"/><text x="${W-R}" y="${H-8}" text-anchor="end">Buts marqués par match →</text><text transform="rotate(-90 10 ${(H-B+Tp)/2+40})" x="10" y="${Tp+6}">← Buts encaissés (moins = mieux)</text>`;
+  items.forEach(x=>{const a=pos[x.e.h.id],b=pos[x.e.a.id];if(a&&b)s+=`<line class="ln" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}"/>`});
+  pts.forEach(p=>{const [cx,cy]=pos[p.id],lab=esc(p.n.split(" ").slice(-1)[0].slice(0,9));
+    s+=`<g><title>${esc(p.n)} (Elo ${p.elo})</title><circle class="${p.tp==="h"?"dh":"da"}" cx="${cx}" cy="${cy}" r="5"/><text x="${cx+7}" y="${cy+3}">${lab}</text></g>`});
+  $("chart").innerHTML=s+"</svg>";$("chartwrap").hidden=false;
+}
+// ---- Programme principal ----
+let S=null;
+async function run(){
+  $("status").textContent="Chargement…";$("status").className="";$("list").replaceChildren();$("reload").hidden=true;$("lh").hidden=true;$("chartwrap").hidden=true;$("bilan").hidden=true;setP(0);
+  const log=[];
+  try{
+    const now=Date.now(),d0=new Date(now),sy=d0.getMonth()>=6?d0.getFullYear():d0.getFullYear()-1;
+    const since=Math.max(Date.UTC(sy,6,20),now-180*DAY),ev=new Map(),cnt={},tasks=[],retry=[];
+    LG.forEach(([slug])=>{cnt[slug]={n:0,err:""};
+      const mk=(a,b)=>{
+        const f=async()=>{const r=await espn(slug,a,b);r.forEach(e=>ev.set(slug+e.id,e));cnt[slug].n+=r.length};
+        return async()=>{try{await f()}catch(e){retry.push(async()=>{try{await f()}catch(e2){cnt[slug].err=e2.message||String(e2)}})}}};
+      tasks.push(mk(now-DAY,now+8*DAY));
+      for(let a=since;a<now;a+=45*DAY)tasks.push(mk(a,Math.min(a+44*DAY,now)));
+    });
+    await pool(tasks,3,(d,n)=>setP(75*d/n,`Étape 1/3 : résultats et calendriers (${d}/${n})…`));
+    if(retry.length){setP(78,`Nouvelle tentative de ${retry.length} source(s) en échec…`);await wait(1500);await pool(retry,2,(d,n)=>setP(78+7*d/n))}
+    LG.forEach(([s,nm])=>log.push(`ESPN ${nm} : ${cnt[s].n} matchs${cnt[s].err?" — erreur : "+cnt[s].err:""}`));
+    let src="ESPN";
+    if(!ev.size){
+      setP(85,"ESPN indisponible, essai avec TheSportsDB…");
+      try{(await sdb()).forEach(e=>ev.set("sdb"+e.id,e));src="TheSportsDB (secours, peu de résultats : Elo moins fiable)";log.push(`TheSportsDB : ${ev.size} matchs`)}catch(e){log.push("TheSportsDB : erreur "+e.message)}
+    }
+    const okey=localStorage.getItem("oddsKey")||DEFAULT_KEY;let odds=[],note="";
+    if(okey){setP(90,"Étape 2/3 : cotes…");try{odds=await getOdds(okey,()=>{})}catch(e){note=" "+e.message}}
+    setP(100,"Calcul de l'Elo…");
+    const all=[...ev.values()],res=all.filter(e=>e.done&&e.hs!=null&&e.as!=null&&e.t<=now);
+    const m=build(res);
+    S={T:m.T,fx:all.filter(e=>e.pre&&e.t>now-36e5),odds,now,src,note,log,nres:res.length,res,items:[]};
+    if(m.bt>=20){
+      const B=[[.65,1.01,"65 % et plus"],[.55,.65,"55 à 65 %"],[.45,.55,"45 à 55 %"],[0,.45,"moins de 45 %"]];
+      const lines=B.map(([a,b,l])=>{const s=m.cal.filter(c=>c[0]>=a&&c[0]<b);return s.length?`• ${l} annoncé → ${Math.round(100*s.filter(c=>c[1]).length/s.length)} % de réussite réelle (${s.length} matchs)`:null}).filter(Boolean);
+      $("bilan").textContent=`Test du modèle sur ${m.bt} matchs déjà joués : ${Math.round(100*m.ok/m.bt)} % de résultats justes. Choisir toujours l'équipe à domicile donnerait ${Math.round(100*m.hw/m.bt)} %.\nFiabilité des probabilités annoncées :\n${lines.join("\n")}\nAucun modèle ne garantit un gain chaque soir : les cotes incluent une marge de 5 à 8 % pour le bookmaker. Seuls les paris « à valeur positive » ont un intérêt, et même eux restent aléatoires d'un soir à l'autre.`;
+      $("bilan").hidden=false;
+    }
+    $("progwrap").hidden=true;$("reload").hidden=false;render();
+  }catch(err){
+    $("progwrap").hidden=true;$("status").textContent="Erreur : "+err.message;$("status").className="err";$("reload").hidden=false;
+  }finally{$("log").textContent=log.join("\n")}
+}
+function render(){
+  if(!S)return;
+  $("list").replaceChildren();
+  const {T,odds,now}=S,win=+$("win").value,out=[];
+  S.fx.filter(e=>e.t<=now+win*36e5).forEach(e=>{
+    const H=T[e.h.id],A=T[e.a.id],rest=t=>t&&t.last?(e.t-t.last)/DAY:null;
+    const om=odds.find(o=>same(o.home_team,e.h.n)&&same(o.away_team,e.a.n)),od=om&&oddsOf(om);
+    let p=null;
+    if(H&&A&&H.pl>=3&&A.pl>=3)p=predict(H.elo,A.elo,rest(H),rest(A));
+    if(p&&od){const q={};["1","N","2"].forEach(k=>q[k]=.4*p[k]+.6*od.p[k]);p=q}else if(od)p=od.p;
+    const o=p?{}:null;
+    if(p)["1","N","2"].forEach(k=>o[k]=od&&od.best[k]?od.best[k]:1/p[k]/MARGIN);
+    out.push({e,H,A,rH:rest(H),rA:rest(A),p,od,o,est:!od,z:goals(H,A,p)});
+  });
+  out.sort((a,b)=>(b.p?Math.max(...Object.values(b.p)):-1)-(a.p?Math.max(...Object.values(a.p)):-1)||a.e.t-b.e.t);
+  S.items=out;
+  let msg=out.length?`${out.length} matchs trouvés (${S.nres} résultats analysés, source : ${S.src}).`:`Aucun match trouvé sur cette période (${S.nres} résultats analysés). Essayez « 7 prochains jours » ou ouvrez le diagnostic en bas.`;
+  $("status").textContent=msg+S.note+(odds.length?"":" Pas de cotes de marché reçues.");
+  drawChart(out,T);if(out.length)$("lh").hidden=false;
+  out.forEach(x=>{
+    const {e,p,od}=x,c=document.createElement("div");c.className="m";c.tabIndex=0;c.setAttribute("role","button");c.setAttribute("aria-expanded","false");
+    let hh=`<div class="top"><span>${esc(LGN[e.slug]||e.lg||"")}</span><span>${new Date(e.t).toLocaleString("fr-FR",{weekday:"short",hour:"2-digit",minute:"2-digit"})}</span></div><div class="teams">${esc(e.h.n)} - ${esc(e.a.n)}</div>`;
+    if(p){
+      const pick=argmax(p);
+      ["1","N","2"].forEach(k=>hh+=`<div class="row${k===pick?" pick":""}"><span>${k}</span><div class="bar"><i style="width:${Math.round(p[k]*100)}%"></i></div><span>${Math.round(p[k]*100)} % · cote juste ${(1/p[k]).toFixed(2)}${od?" · marché "+od.avg[k].toFixed(2):""}</span></div>`);
+      const pp=p[pick];
+      hh+=`<div class="verdict"><span class="${pp>=.6?"ok":pp>=.5?"mid":"no"}">${pp>=.6?"Net. ":pp>=.5?"Moyen. ":"Incertain. "}</span>Tendance ${pick}${od?" (modèle Elo + cotes du marché)":" (modèle Elo)"}.</div>`;
+      hh+=`<div class="lect">👁 ${advice(x)}</div>`;
+    }else hh+=`<div class="verdict mid">Pas assez de données pour estimer ce match.</div>`;
+    hh+=tline(x.H,e.h.n)+tline(x.A,e.a.n);
+    c.innerHTML=hh;
+    const ch=document.createElement("div"),pn=document.createElement("div");
+    ch.className="chev";ch.textContent="Toucher pour plus de données ▾";pn.className="panel";pn.hidden=true;
+    pn.innerHTML=extra(x)+detail(x.H,e.h.n,x.rH)+"<hr style='border:0;border-top:1px solid var(--line)'>"+detail(x.A,e.a.n,x.rA);
+    const tog=()=>{pn.hidden=!pn.hidden;ch.textContent=pn.hidden?"Toucher pour plus de données ▾":"Masquer ▴";c.setAttribute("aria-expanded",String(!pn.hidden))};
+    c.addEventListener("click",tog);
+    c.addEventListener("keydown",ev=>{if((ev.key==="Enter"||ev.key===" ")&&ev.target===c){ev.preventDefault();tog()}});
+    pn.addEventListener("click",ev=>ev.stopPropagation());
+    c.append(ch,pn);$("list").append(c);
+  });
+  if(!$("sim").hidden)renderSim();
+}
+
+// ---- Simulation type loto ----
+let SIM={map:{},mode:"eq",w:{}};
+const mid=x=>x.e.slug+x.e.id;
+const simItems=()=>S?S.items.filter(x=>x.p):[];
+function bestScoreFor(x,k){const b=x.z&&x.z.bs[k];return b?[b[0],b[1]]:[null,null]}
+function stakes(){
+  const B=Math.max(0,+$("budget").value||0),ids=Object.keys(SIM.map);
+  const wts=ids.map(id=>SIM.mode==="kelly"?(SIM.w[id]||0):1),sw=wts.reduce((a,b)=>a+b,0)||1,r={};
+  ids.forEach((id,i)=>r[id]=Math.round(B*wts[i]/sw*100)/100);
+  return r;
+}
+function renderSim(){
+  const L=simItems(),g=$("grid");g.replaceChildren();
+  if(!L.length){g.innerHTML='<p class="mid">Aucun match avec probabilités pour le moment. Revenez aux matchs et attendez la fin du chargement.</p>';summary();return}
+  L.forEach(x=>{
+    const id=mid(x),c=document.createElement("div");c.className="m";
+    const balls=["1","N","2"].map(k=>`<button type="button" class="ball" data-id="${esc(id)}" data-k="${k}" aria-pressed="false" aria-label="Résultat ${k}, cote ${x.o[k].toFixed(2)}"><span>${k}</span><small>${x.o[k].toFixed(2)}${x.est?"*":""}</small></button>`).join("");
+    c.innerHTML=`<div class="top"><span>${esc(LGN[x.e.slug]||x.e.lg||"")}</span><span>${new Date(x.e.t).toLocaleString("fr-FR",{weekday:"short",hour:"2-digit",minute:"2-digit"})}</span></div><div class="teams">${esc(x.e.h.n)} - ${esc(x.e.a.n)}</div><div class="balls">${balls}</div><div class="sc">Score (facultatif) <input class="sh" type="number" min="0" max="20" inputmode="numeric" data-id="${esc(id)}" aria-label="Buts ${esc(x.e.h.n)}"> - <input class="sa" type="number" min="0" max="20" inputmode="numeric" data-id="${esc(id)}" aria-label="Buts ${esc(x.e.a.n)}"><span class="stk" data-id="${esc(id)}"></span></div>`;
+    g.append(c);
+  });
+  const f=document.createElement("p");f.className="legend";f.textContent="* cote estimée (cote juste moins une marge de 7 %), faute de cote de marché pour ce match. Le gain n'est calculé que sur le résultat 1N2 ; le score exact reste indicatif.";g.append(f);
+  paint();
+}
+function paint(){
+  const L=simItems(),st=stakes(),by={};L.forEach(x=>by[mid(x)]=x);
+  document.querySelectorAll("#grid .ball").forEach(b=>{
+    const x=by[b.dataset.id],k=b.dataset.k,sel=SIM.map[b.dataset.id]&&SIM.map[b.dataset.id].k===k;
+    b.classList.toggle("sel",!!sel);b.classList.toggle("val",!!x&&x.p[k]*x.o[k]-1>=.03);b.setAttribute("aria-pressed",String(!!sel));
+  });
+  document.querySelectorAll("#grid .stk").forEach(s=>{const id=s.dataset.id;s.textContent=SIM.map[id]?"Mise "+eur(st[id]||0):""});
+  document.querySelectorAll("#grid .sh,#grid .sa").forEach(i=>{
+    if(document.activeElement===i)return;
+    const m=SIM.map[i.dataset.id],v=m?(i.classList.contains("sh")?m.sh:m.sa):null;i.value=v==null?"":v;
+  });
+  summary();
+}
+function mb(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function summary(){
+  const L=simItems(),st=stakes(),el=$("summary");
+  const bets=L.filter(x=>SIM.map[mid(x)]).map(x=>{const id=mid(x),k=SIM.map[id].k;return{x,id,k,s:st[id]||0,o:x.o[k],p:x.p[k]}});
+  if(!bets.length){el.innerHTML="Choisissez des résultats (1, N, 2) ou utilisez « Pré-remplir optimisé » pour voir l'estimation des gains.";return}
+  const tot=bets.reduce((a,b)=>a+b.s,0),ev=bets.reduce((a,b)=>a+b.s*(b.p*b.o-1),0),allw=bets.reduce((a,b)=>a+b.s*(b.o-1),0);
+  const rnd=mb(12345),N=20000,R=new Float64Array(N);
+  for(let n=0;n<N;n++){let g=-tot;for(const b of bets)if(rnd()<b.p)g+=b.s*b.o;R[n]=g}
+  R.sort();let pos=0;for(let n=0;n<N;n++)if(R[n]>0)pos++;
+  const q=f=>R[Math.min(N-1,Math.floor(N*f))],sg=v=>(v>=0?"+":"")+eur(v);
+  const nest=bets.filter(b=>b.x.est).length;
+  el.innerHTML=`<div><b>${bets.length} pari(s) · mise totale ${eur(tot)}</b></div>
+<div>Gain espéré (moyenne) : <span class="${ev>=0?"ok":"no"}">${sg(ev)}</span>${tot?` (${ev>=0?"+":""}${(100*ev/tot).toFixed(1)} % de la mise)`:""}</div>
+<div>Probabilité de finir en positif : <b>${(100*pos/N).toFixed(0)} %</b></div>
+<div>Scénarios : malchanceux (1 soir sur 10) ${sg(q(.1))} · médian ${sg(q(.5))} · chanceux (1 soir sur 10) ${sg(q(.9))}</div>
+<div>Si tout passe : ${sg(allw)}</div>
+${ev<0?'<div class="no">Gain espéré négatif : répété chaque soir, ce pari perd de l\'argent.</div>':""}
+${nest?`<div class="k">${nest} pari(s) avec cote estimée (*) : estimation moins fiable.</div>`:""}`;
+}
+function fillOpt(){
+  const L=simItems(),allm=$("allm").checked;SIM.map={};SIM.w={};SIM.mode=allm?"eq":"kelly";let nv=0;
+  L.forEach(x=>{
+    let b=null;["1","N","2"].forEach(k=>{const ed=x.p[k]*x.o[k]-1;if(!b||ed>b.ed)b={k,ed}});
+    if(b.ed>.02||allm){
+      const [sh,sa]=bestScoreFor(x,b.k),id=mid(x);
+      SIM.map[id]={k:b.k,sh,sa};if(b.ed>.02)nv++;
+      SIM.w[id]=b.ed>0?b.ed/(x.o[b.k]-1):0;
+    }
+  });
+  if(!allm&&!nv){$("simmsg").innerHTML='<span class="mid">Aucun pari à valeur positive détecté pour le moment : le plus rentable est de ne pas parier.</span>';SIM.mode="eq"}
+  else $("simmsg").textContent=allm?"Meilleure option de chaque match, mises égales (certaines peuvent avoir un gain espéré négatif).":`${nv} pari(s) de valeur retenu(s). Budget réparti selon l'avantage de chacun, score le plus probable pré-rempli.`;
+  paint();
+}
+$("grid").addEventListener("click",ev=>{
+  const b=ev.target.closest(".ball");if(!b)return;
+  const id=b.dataset.id,k=b.dataset.k;SIM.mode="eq";
+  if(SIM.map[id]&&SIM.map[id].k===k)delete SIM.map[id];else SIM.map[id]={k,sh:null,sa:null};
+  paint();
+});
+$("grid").addEventListener("input",ev=>{
+  const i=ev.target;if(!i.matches(".sh,.sa"))return;
+  const row=i.closest(".m"),h=row.querySelector(".sh").value,a=row.querySelector(".sa").value,id=i.dataset.id;
+  if(h!==""&&a!==""){SIM.map[id]={k:+h>+a?"1":+h<+a?"2":"N",sh:+h,sa:+a};SIM.mode="eq";paint()}
+});
+$("budget").addEventListener("input",paint);
+$("opt").onclick=fillOpt;
+$("clr").onclick=()=>{SIM={map:{},mode:"eq",w:{}};$("simmsg").textContent="";paint()};
+$("gosim").onclick=()=>{$("home").hidden=true;$("sim").hidden=false;renderSim();scrollTo(0,0)};
+$("back").onclick=()=>{$("sim").hidden=true;$("home").hidden=false;scrollTo(0,0)};
+// ---- Oeil flottant ----
+const eyeT=o=>{$("eyepanel").hidden=!o;$("eye").setAttribute("aria-expanded",String(o))};
+$("eye").onclick=()=>eyeT($("eyepanel").hidden);
+$("eyeclose").onclick=()=>eyeT(false);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")eyeT(false)});
+// ---- Réglages ----
+$("key").value=localStorage.getItem("oddsKey")||"";
+$("save").addEventListener("click",()=>{
+  let ok=true;try{localStorage.setItem("oddsKey",$("key").value.trim());localStorage.removeItem("oddsCache")}catch(e){ok=false}
+  $("saved").textContent=ok?"Enregistré, actualisation…":"Enregistrement impossible (mode privé ?).";$("saved").className=ok?"ok":"no";
+  setTimeout(()=>{$("cfg").open=false;$("saved").textContent="";run()},700);
+});
+$("win").onchange=render;$("reload").onclick=run;run();
+</script>
+</body>
+</html>
